@@ -8,31 +8,21 @@ test.beforeEach(async ({ page }) => {
 var url = 'http://localhost:8080/auth/realms/test/protocol/openid-connect/auth?client_id=test&redirect_uri=https://www.google.com&state=41dacfb3-fa49-499e-9797-2137c618a8a8&response_type=code&scope=openid';
 
 test.describe('Login', () => {
-  test('should allow login as admin', async ({ page, request }) => {
-    (async () => {
-      const browser = await firefox.launch({
-        logger: {
-          isEnabled: (name, severity) => name === 'browser',
-          log: (name, severity, message, args) => console.log(`${name} ${message}`)
-        }
-      });
-    })();
+  test('should allow login with account and validate JWT payload', async ({ page, request }) => {
+    const env = getEnvVars()
         
     await page.goto(url);
     await page.getByLabel('Username or email').click();
-    await page.getByLabel('Username or email').fill('test');
+    await page.getByLabel('Username or email').fill(env.ID);
     await page.getByLabel('Username or email').press('Tab');
-    await page.getByLabel('Password').fill("test");
+    await page.getByLabel('Password').fill(env.PASSWORD);
     await page.getByRole('button', { name: 'Sign In' }).click();
 
-    console.log(page.url());
     await page.waitForURL('https://www.google.com/*');
 
     let s = page.url().indexOf("code=")
-    console.log(s)
 
     let code = page.url().substring(s+5)
-    console.log(code)
 
     const formData = new URLSearchParams();
     formData.append('grant_type', 'authorization_code');
@@ -50,10 +40,25 @@ test.describe('Login', () => {
       })
     expect(tokenResponse.ok()).toBeTruthy();
     const token = await tokenResponse.json();
-    console.log(token);
-    console.log(token['access_token']);
+
+    let dot = token['access_token'].indexOf(".");
+    let payload = token['access_token'].substring(dot + 1);
+    dot = payload.indexOf(".");
+    payload = payload.substring(0, dot);
+    console.log(JSON.stringify(JSON.parse(Buffer.from(payload, 'base64').toString()),null,2)); 
   })
 });
+
+function getEnvVars() {
+  const envVars = {
+    ID: process.env.ID,
+    PASSWORD: process.env.PASSWORD,
+  };
+  
+  return envVars;
+}
+
+
 
 // interface AccessTokenResponse {
 //   access_token: string;

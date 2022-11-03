@@ -11,3 +11,5 @@ node_modules/
 docker-compose.yaml
 tests-examples/
 stests/
+
+.env
